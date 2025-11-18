@@ -19,6 +19,8 @@ async function bootstrap() {
     credentials: true,
   });
 
-  await app.listen(config.getOrThrow<number>('PORT'));
+  await app.listen(config.getOrThrow<number>('PORT'), '0.0.0.0', () =>
+    console.log(`Server started on port ${config.get<number>('PORT')}`),
+  );
 }
 bootstrap().catch((e) => console.error(e));

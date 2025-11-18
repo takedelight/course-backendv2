@@ -3,6 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
+import { TicketModule } from './ticket/ticket.module';
+import { User } from './user/entities/user.entity';
+import { Ticket } from './ticket/entities/ticket.entity';
 
 @Module({
   imports: [
@@ -16,12 +19,13 @@ import { AuthModule } from './auth/auth.module';
         username: config.getOrThrow<string>('DATABASE_USERNAME'),
         password: config.getOrThrow<string>('DATABASE_PASSWORD'),
         database: config.getOrThrow<string>('DATABASE_NAME'),
-        autoLoadEntities: true,
+        entities: [User, Ticket],
         synchronize: true,
       }),
     }),
     UserModule,
     AuthModule,
+    TicketModule,
   ],
 })
 export class AppModule {}
