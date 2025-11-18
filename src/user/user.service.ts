@@ -48,7 +48,9 @@ export class UserService {
       where: { email: dto.email },
     });
 
-    if (!user) {
+    console.log(dto);
+
+    if (user) {
       throw new ConflictException('User with this email already exists');
     }
 
