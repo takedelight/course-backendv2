@@ -16,15 +16,19 @@ export class Ticket {
   @Column('varchar')
   type: string;
 
-  @Column('boolean', { default: false })
-  status: boolean;
-
-  @Column('int')
-  priority: number;
+  @Column('boolean', { default: false, name: 'is_complete' })
+  isComplete: boolean;
 
   @ManyToOne(() => User, (user) => user.tickets)
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @Column({
+    type: 'timestamp with time zone',
+    name: 'completed_at',
+    nullable: true,
+  })
+  completedAt: Date | null;
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })
   createdAt: Date;

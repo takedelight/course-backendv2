@@ -37,7 +37,7 @@ export class User {
   })
   role: UserRole;
 
-  @OneToMany(() => Ticket, (ticket) => ticket.user)
+  @OneToMany(() => Ticket, (ticket) => ticket.user, { cascade: ['remove'] })
   tickets: Ticket[];
 
   @CreateDateColumn({ name: 'created_at' })
