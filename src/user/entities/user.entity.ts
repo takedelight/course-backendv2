@@ -15,8 +15,11 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { unique: true })
-  username: string;
+  @Column('varchar', { name: 'first_name' })
+  firstName: string;
+
+  @Column('varchar', { name: 'second_name' })
+  lastName: string;
 
   @Column('varchar', { unique: true })
   email: string;
