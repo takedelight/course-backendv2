@@ -45,20 +45,22 @@ export class TicketService {
     }));
   }
 
-  async geAllUserTickets(userId: string) {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-    });
+  async geAllUserTickets(userId: string, query?: string) {
+    const qb = this.ticketRepository
+      .createQueryBuilder('ticket')
+      .leftJoin('ticket.user', 'user')
+      .where('user.id = :userId', { userId });
 
-    const tickets = await this.ticketRepository.find({
-      where: { user: { id: userId } },
-    });
+    if (query) {
+      qb.andWhere(
+        `CAST(ticket.id AS TEXT) ILIKE :q
+   OR ticket.type ILIKE :q
+   OR user.email ILIKE :q`,
+        { q: `%${query}%` },
+      );
+    }
 
-    return {
-      firstName: user?.firstName,
-      lastName: user?.lastName,
-      tickets,
-    };
+    return await qb.getMany();
   }
 
   async createTicket(dto: CreateTicketDto, userId: string) {
@@ -95,7 +97,7 @@ export class TicketService {
         completedAt,
         user: { id: userId },
         createdAt: this.faker.date.between({
-          from: String(new Date('2000-05-01')),
+          from: String(new Date('2024-05-01')),
           to: String(new Date('2025-11-04')),
         }),
       });

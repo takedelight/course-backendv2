@@ -24,9 +24,6 @@ export class AuthController {
     @Res() response: Response,
     @Req() request: Request,
   ) {
-    console.log(request.headers);
-    console.log();
-
     return this.authService.login(dto, response, request);
   }
 

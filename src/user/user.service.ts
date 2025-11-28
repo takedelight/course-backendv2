@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { hash } from 'argon2';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -16,20 +17,45 @@ export class UserService {
   ) {}
 
   async getAll() {
-    return await this.userRepository.find({ select: { password: false } });
+    return await this.userRepository.find({
+      select: [
+        'createdAt',
+        'email',
+        'id',
+        'firstName',
+        'updatedAt',
+        'lastName',
+        'role',
+      ],
+    });
   }
 
   async getByEmail(email: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(
+        'Користувача з такою електроною поштою не існує',
+      );
     }
 
     return user;
   }
   async getById(id: string) {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({
+      where: { id },
+      select: [
+        'createdAt',
+        'email',
+        'id',
+        'firstName',
+        'updatedAt',
+        'lastName',
+        'role',
+      ],
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -48,8 +74,6 @@ export class UserService {
       where: { email: dto.email },
     });
 
-    console.log(dto);
-
     if (user) {
       throw new ConflictException('User with this email already exists');
     }
@@ -59,5 +83,17 @@ export class UserService {
       password: await hash(dto.password),
     });
     return await this.userRepository.save(newUser);
+  }
+
+  async update(userId: string, dto: UpdateUserDto) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException('Користувача з таким id не існує.');
+    }
+
+    await this.userRepository.update(userId, { ...dto });
+
+    return { message: 'Ваші данні оновлено.' };
   }
 }

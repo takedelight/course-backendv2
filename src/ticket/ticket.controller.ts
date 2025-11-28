@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -28,8 +29,8 @@ export class TicketController {
   }
 
   @Get('')
-  async getByUserId(@Req() request: Request) {
-    return await this.ticketService.geAllUserTickets(request.user.sub);
+  async getByUserId(@Req() request: Request, @Query('q') query: string) {
+    return await this.ticketService.geAllUserTickets(request.user.sub, query);
   }
 
   @Post('')
