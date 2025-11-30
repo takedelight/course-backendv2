@@ -19,7 +19,9 @@ export class Ticket {
   @Column('boolean', { default: false, name: 'is_complete' })
   isComplete: boolean;
 
-  @ManyToOne(() => User, (user) => user.tickets)
+  @ManyToOne(() => User, (user) => user.tickets, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'user_id' })
   user: User;
 

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Req,
@@ -38,9 +39,12 @@ export class TicketController {
     return await this.ticketService.createTicket(body, request.user.sub);
   }
 
-  @Post('/generate/:count')
-  async generate(@Req() request: Request, @Param('count') count: number) {
-    return await this.ticketService.fakerCreateTickets(request.user.sub, count);
+  @Post('/generate/:id/:count')
+  async generate(
+    @Param('id') id: string,
+    @Param('count', ParseIntPipe) count: number,
+  ) {
+    return this.ticketService.fakerCreateTickets(id, count);
   }
 
   @Roles('operator')

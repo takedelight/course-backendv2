@@ -90,17 +90,20 @@ export class TicketService {
 
   async fakerCreateTickets(userId: string, count: number) {
     for (let i = 0; i < count; i++) {
-      const completedAt = Math.random() < 0.5 ? this.faker.date.past() : null;
+      const isComplete = this.faker.datatype.boolean();
+      const completedAt = isComplete ? this.faker.date.past() : null;
+
       const ticket = this.ticketRepository.create({
         type: this.faker.helpers.arrayElement(this.types),
-        isComplete: this.faker.datatype.boolean(),
+        isComplete,
         completedAt,
         user: { id: userId },
         createdAt: this.faker.date.between({
-          from: String(new Date('2024-05-01')),
-          to: String(new Date('2025-11-04')),
+          from: new Date('2024-05-01'),
+          to: new Date('2025-11-04'),
         }),
       });
+
       await this.ticketRepository.save(ticket);
     }
   }

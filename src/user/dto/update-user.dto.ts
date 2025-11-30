@@ -1,4 +1,5 @@
-import { IsOptional } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
+import { UserRole } from '../entities/user.entity';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -7,4 +8,6 @@ export class UpdateUserDto {
   firstName?: string;
   @IsOptional()
   lastName?: string;
+  @IsString()
+  role: UserRole;
 }
