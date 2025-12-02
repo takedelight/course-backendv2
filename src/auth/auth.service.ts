@@ -64,7 +64,7 @@ export class AuthService {
       new Date(new Date(Date.now() + 31 * 24 * 60 * 60 * 1000)),
     );
 
-    response.json({ access_token: accessToken });
+    return response.json({ access_token: accessToken });
   }
 
   async refresh(response: Response, request: Request) {
@@ -113,8 +113,9 @@ export class AuthService {
   }
 
   logout(response: Response) {
-    response.clearCookie('refresh_token');
-    response.sendStatus(200);
+    this.setCookie(response, 'refresh_token', '', new Date(0));
+
+    return response.sendStatus(200);
   }
 
   setCookie(response: Response, key: string, token: string, expires: Date) {
@@ -122,7 +123,9 @@ export class AuthService {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
+      path: '/',
       expires,
+      domain: 'localhost',
     });
   }
 }

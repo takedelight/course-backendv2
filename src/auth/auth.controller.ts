@@ -4,7 +4,6 @@ import { RegisterDto } from './dto/register.dto';
 import type { Request, Response } from 'express';
 import { LoginDto } from './dto/login.dto';
 import { JwtGuard } from './guards/jwt.guard';
-import { RolesGuard } from './guards/roles.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -28,7 +27,6 @@ export class AuthController {
   }
 
   @UseGuards(JwtGuard)
-  @UseGuards(RolesGuard)
   @Post('/logout')
   logout(@Res() response: Response) {
     return this.authService.logout(response);

@@ -108,12 +108,9 @@ export class UserService {
   }
 
   async generateUsers(count: number, password: string) {
-    const users: User[] = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < 100; i++) {
       const user = this.userRepository.create({
-        email: this.faker.internet
-          .email({ provider: 'gmail.com' })
-          .toLowerCase(),
+        email: this.faker.internet.email().toLowerCase(),
         firstName: this.faker.person.firstName(),
         lastName: this.faker.person.lastName(),
         role: UserRole.USER,
@@ -123,14 +120,12 @@ export class UserService {
           to: new Date('2025-11-04'),
         }),
       });
-
-      users.push(user);
+      await this.userRepository.save(user);
     }
-    await this.userRepository.save(users);
 
-    return {
-      message: `Користувачів у кількості ${users.length} успішно згенеровано`,
-    };
+    // return {
+    //   message: `Користувачів у кількості ${users.length} успішно згенеровано`,
+    // };
   }
 
   async update(userId: string, dto: UpdateUserDto) {
