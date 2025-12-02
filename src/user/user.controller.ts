@@ -35,9 +35,9 @@ export class UserController {
     return await this.userService.update(req.user.sub, dto);
   }
 
-  @Delete('/delete')
-  async delete(@Req() req: Request) {
-    return await this.userService.delete(req.user.sub);
+  @Delete('/delete/:id')
+  async delete(@Param('id') id: string) {
+    return await this.userService.delete(id);
   }
 
   @Roles('operator')

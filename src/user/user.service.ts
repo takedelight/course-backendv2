@@ -108,9 +108,11 @@ export class UserService {
   }
 
   async generateUsers(count: number, password: string) {
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < count; i++) {
       const user = this.userRepository.create({
-        email: this.faker.internet.email().toLowerCase(),
+        email: this.faker.internet
+          .email({ provider: 'gmail.com' })
+          .toLowerCase(),
         firstName: this.faker.person.firstName(),
         lastName: this.faker.person.lastName(),
         role: UserRole.USER,
