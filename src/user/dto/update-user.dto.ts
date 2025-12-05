@@ -1,13 +1,20 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 import { UserRole } from '../entities/user.entity';
 
 export class UpdateUserDto {
   @IsOptional()
+  @IsEmail()
   email?: string;
+
   @IsOptional()
-  firstName?: string;
-  @IsOptional()
-  lastName?: string;
   @IsString()
-  role: UserRole;
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @IsOptional()
+  @IsString()
+  role?: UserRole;
 }

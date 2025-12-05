@@ -8,6 +8,12 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+export enum StatementStatus {
+  PENDING = 'В обробці',
+  SUCCESS = 'Виконано',
+  REJECT = 'Відхилено',
+}
+
 @Entity()
 export class Ticket {
   @PrimaryGeneratedColumn('increment')
@@ -16,8 +22,12 @@ export class Ticket {
   @Column('varchar')
   type: string;
 
-  @Column('boolean', { default: false, name: 'is_complete' })
-  isComplete: boolean;
+  @Column({
+    default: StatementStatus.PENDING,
+    enum: StatementStatus,
+    name: 'status',
+  })
+  status: StatementStatus;
 
   @ManyToOne(() => User, (user) => user.tickets, {
     onDelete: 'CASCADE',
@@ -30,8 +40,6 @@ export class Ticket {
     name: 'completed_at',
     nullable: true,
   })
-  completedAt: Date | null;
-
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })
   createdAt: Date;
 }

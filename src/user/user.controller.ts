@@ -7,7 +7,6 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
@@ -30,9 +29,9 @@ export class UserController {
     return await this.userService.getAll();
   }
 
-  @Patch('/update')
-  async update(@Req() req: Request, @Body() dto: UpdateUserDto) {
-    return await this.userService.update(req.user.sub, dto);
+  @Patch('/update/:id')
+  async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return await this.userService.update(id, dto);
   }
 
   @Delete('/delete/:id')
@@ -59,5 +58,11 @@ export class UserController {
   @Delete('/delete')
   async deleteMany(@Body() ids: string[]) {
     return await this.userService.deleteMany(ids);
+  }
+
+  @Roles('operator')
+  @Delete('/deleteAll')
+  async deleteAll() {
+    return await this.userService.deleteAllUsers();
   }
 }

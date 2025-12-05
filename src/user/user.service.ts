@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { hash } from 'argon2';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -108,6 +108,8 @@ export class UserService {
   }
 
   async generateUsers(count: number, password: string) {
+    const users: User[] = [];
+
     for (let i = 0; i < count; i++) {
       const user = this.userRepository.create({
         email: this.faker.internet
@@ -122,16 +124,19 @@ export class UserService {
           to: new Date('2025-11-04'),
         }),
       });
-      await this.userRepository.save(user);
+      users.push(user);
     }
 
-    // return {
-    //   message: `Користувачів у кількості ${users.length} успішно згенеровано`,
-    // };
+    await this.userRepository.save(users);
+    return {
+      message: `Користувачів у кількості ${users.length} успішно згенеровано`,
+    };
   }
 
   async update(userId: string, dto: UpdateUserDto) {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
 
     if (!user) {
       throw new NotFoundException('Користувача з таким id не існує.');
@@ -147,8 +152,20 @@ export class UserService {
       }
     }
 
-    await this.userRepository.update(userId, { ...dto });
+    const updated = this.userRepository.merge(user, dto);
+
+    await this.userRepository.save(updated);
 
     return { message: 'Ваші данні оновлено.' };
+  }
+
+  async deleteAllUsers() {
+    const users = await this.userRepository.find({
+      where: { role: Not(UserRole.OPERATOR) },
+    });
+
+    if (users.length === 0) return;
+
+    await this.userRepository.remove(users);
   }
 }

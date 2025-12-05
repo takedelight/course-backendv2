@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Ticket } from './entities/ticket.entity';
+import { StatementStatus, Ticket } from './entities/ticket.entity';
 import { Repository } from 'typeorm';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { Request } from 'express';
@@ -32,13 +32,13 @@ export class TicketService {
   async getAllTickets() {
     const tickets = await this.ticketRepository.find({
       relations: ['user'],
+      order: { createdAt: 'DESC' },
     });
 
     return tickets.map((ticket) => ({
       id: ticket.id,
       type: ticket.type,
-      isComplete: ticket.isComplete,
-      completedAt: ticket.completedAt,
+      status: ticket.status,
       createdAt: ticket.createdAt,
       firstName: ticket.user.firstName,
       lastName: ticket.user.lastName,
@@ -76,13 +76,30 @@ export class TicketService {
   }
 
   async completeTicket(id: number) {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id },
+      order: { createdAt: 'DESC' },
+    });
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+    const complitedTicket = {
+      ...ticket,
+      status: StatementStatus.SUCCESS,
+      completedAt: new Date(),
+    };
+    return await this.ticketRepository.save(complitedTicket);
+  }
+
+  async rejectTicket(id: number) {
     const ticket = await this.ticketRepository.findOne({ where: { id } });
     if (!ticket) {
       throw new NotFoundException('Ticket not found');
     }
     const complitedTicket = {
       ...ticket,
-      isComplete: true,
+      status: StatementStatus.REJECT,
+
       completedAt: new Date(),
     };
     return await this.ticketRepository.save(complitedTicket);
@@ -90,13 +107,13 @@ export class TicketService {
 
   async fakerCreateTickets(userId: string, count: number) {
     for (let i = 0; i < count; i++) {
-      const isComplete = this.faker.datatype.boolean();
-      const completedAt = isComplete ? this.faker.date.past() : null;
+      const status = this.faker.helpers.arrayElement(
+        Object.values(StatementStatus),
+      );
 
       const ticket = this.ticketRepository.create({
         type: this.faker.helpers.arrayElement(this.types),
-        isComplete,
-        completedAt,
+        status,
         user: { id: userId },
         createdAt: this.faker.date.between({
           from: new Date('2024-05-01'),

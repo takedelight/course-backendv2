@@ -54,8 +54,14 @@ export class TicketController {
   }
 
   @Roles('operator')
-  @Delete('/:id')
+  @Post('/complete/:id')
   async complete(@Param('id') id: number) {
     return await this.ticketService.completeTicket(id);
+  }
+
+  @Roles('operator')
+  @Post('/reject/:id')
+  async reject(@Param('id') id: number) {
+    return await this.ticketService.rejectTicket(id);
   }
 }
