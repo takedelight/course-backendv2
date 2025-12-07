@@ -8,6 +8,7 @@ import { User } from './user/entities/user.entity';
 import { Ticket } from './ticket/entities/ticket.entity';
 import { ProfileModule } from './profile/profile.module';
 import { RequestLog } from './profile/shared/middlewares/request-log.middleware';
+import { SorterModule } from './sorter/sorter.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RequestLog } from './profile/shared/middlewares/request-log.middleware'
     AuthModule,
     TicketModule,
     ProfileModule,
+    SorterModule,
   ],
 })
 export class AppModule {}

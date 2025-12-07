@@ -3,46 +3,108 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { StatementStatus, Ticket } from './entities/ticket.entity';
 import { Repository } from 'typeorm';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { Request } from 'express';
-import { User } from 'src/user/entities/user.entity';
 import { Faker, uk } from '@faker-js/faker';
+import {
+  SortAlgorithm,
+  SorterService,
+  SortResult,
+} from 'src/sorter/sorter.service';
+import { NormalizedTicket } from 'src/shared/types/ticket.type';
+
+interface TicketRow {
+  id: number;
+  type: string;
+  status: string;
+  createdat: Date | string;
+  firstname: string;
+  lastname: string;
+}
 
 @Injectable()
 export class TicketService {
   readonly faker: Faker;
-  private readonly types = [
-    'Реєстрація авто',
-    'Перереєстрація авто',
-    'Зняття з обліку',
-    'Отримання номерів',
-    'Видача дубліката техпаспорта',
-    'Заміна водійського посвідчення',
-    'Отримання довідки про технічний стан',
-    'Заміна номерних знаків',
-  ];
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly sorter: SorterService,
   ) {
     this.faker = new Faker({ locale: uk });
   }
 
-  async getAllTickets() {
-    const tickets = await this.ticketRepository.find({
-      relations: ['user'],
-      order: { createdAt: 'DESC' },
-    });
+  async getAllTickets(
+    q: string,
+    order: string,
+    sortBy: string,
+    algorithms: SortAlgorithm[],
+  ) {
+    const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
 
-    return tickets.map((ticket) => ({
-      id: ticket.id,
-      type: ticket.type,
-      status: ticket.status,
-      createdAt: ticket.createdAt,
-      firstName: ticket.user.firstName,
-      lastName: ticket.user.lastName,
+    const STATUS_MAP: Record<string, string> = {
+      pending: 'В обробці',
+      completed: 'Виконано',
+      rejected: 'Відхилено',
+    };
+
+    const status = STATUS_MAP[sortBy];
+
+    const qb = this.ticketRepository
+      .createQueryBuilder('ticket')
+      .leftJoin('ticket.user', 'user')
+      .select([
+        'ticket.id AS id',
+        'ticket.type AS type',
+        'ticket.status AS status',
+        'ticket.createdAt AS createdAt',
+        'user.firstName AS firstName',
+        'user.lastName AS lastName',
+      ]);
+
+    if (q) {
+      qb.andWhere(
+        `ticket.type ILIKE :q
+      OR user.firstName ILIKE :q
+      OR user.lastName ILIKE :q`,
+        { q: `%${q}%` },
+      );
+    }
+
+    if (status) {
+      qb.andWhere('ticket.status = :status', { status });
+    }
+
+    qb.orderBy('ticket.createdAt', sortOrder);
+
+    const rows: TicketRow[] = await qb.getRawMany();
+
+    const normalizedRows: NormalizedTicket[] = rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      status: r.status,
+      createdAt: r.createdat,
+      firstName: r.firstname,
+      lastName: r.lastname,
     }));
+
+    const results: Array<
+      SortResult<NormalizedTicket> & { algorithm: SortAlgorithm }
+    > = [];
+
+    const sortOrderNormalized = order === 'asc' ? 'asc' : 'desc';
+
+    for (const algorithm of algorithms) {
+      const evaluated = this.sorter.sort(
+        normalizedRows,
+        algorithm,
+        sortOrderNormalized,
+      );
+
+      results.push({
+        algorithm,
+        ...evaluated,
+      });
+    }
+
+    return results;
   }
 
   async geAllUserTickets(userId: string, query?: string) {
@@ -99,7 +161,6 @@ export class TicketService {
     const complitedTicket = {
       ...ticket,
       status: StatementStatus.REJECT,
-
       completedAt: new Date(),
     };
     return await this.ticketRepository.save(complitedTicket);
@@ -124,4 +185,15 @@ export class TicketService {
       await this.ticketRepository.save(ticket);
     }
   }
+
+  private readonly types = [
+    'Реєстрація авто',
+    'Перереєстрація авто',
+    'Зняття з обліку',
+    'Отримання номерів',
+    'Видача дубліката техпаспорта',
+    'Заміна водійського посвідчення',
+    'Отримання довідки про технічний стан',
+    'Заміна номерних знаків',
+  ];
 }
