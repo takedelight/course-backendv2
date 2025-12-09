@@ -4,21 +4,7 @@ import { StatementStatus, Ticket } from './entities/ticket.entity';
 import { Repository } from 'typeorm';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { Faker, uk } from '@faker-js/faker';
-import {
-  SortAlgorithm,
-  SorterService,
-  SortResult,
-} from 'src/sorter/sorter.service';
-import { NormalizedTicket } from 'src/shared/types/ticket.type';
-
-interface TicketRow {
-  id: number;
-  type: string;
-  status: string;
-  createdat: Date | string;
-  firstname: string;
-  lastname: string;
-}
+import { SorterService, SortOrder } from 'src/sorter/sorter.service';
 
 @Injectable()
 export class TicketService {
@@ -31,80 +17,45 @@ export class TicketService {
     this.faker = new Faker({ locale: uk });
   }
 
-  async getAllTickets(
-    q: string,
-    order: string,
-    sortBy: string,
-    algorithms: SortAlgorithm[],
-  ) {
-    const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
-
-    const STATUS_MAP: Record<string, string> = {
-      pending: 'В обробці',
-      completed: 'Виконано',
-      rejected: 'Відхилено',
-    };
-
-    const status = STATUS_MAP[sortBy];
-
+  async getAllTickets(q?: string, order?: SortOrder, sortBy?: string) {
     const qb = this.ticketRepository
       .createQueryBuilder('ticket')
       .leftJoin('ticket.user', 'user')
       .select([
-        'ticket.id AS id',
-        'ticket.type AS type',
-        'ticket.status AS status',
-        'ticket.createdAt AS createdAt',
-        'user.firstName AS firstName',
-        'user.lastName AS lastName',
+        'ticket.id AS "id"',
+        'ticket.type AS "type"',
+        'ticket.status AS "status"',
+        'ticket.createdAt AS "createdAt"',
+        'user.firstName AS "firstName"',
+        'user.lastName AS "lastName"',
       ]);
 
     if (q) {
       qb.andWhere(
-        `ticket.type ILIKE :q
-      OR user.firstName ILIKE :q
-      OR user.lastName ILIKE :q`,
+        `(ticket.type ILIKE :q OR user.firstName ILIKE :q OR user.lastName ILIKE :q)`,
         { q: `%${q}%` },
       );
     }
 
+    const STATUS_MAP = {
+      completed: 'Виконано',
+      rejected: 'Відхилено',
+      pending: 'В обробці',
+    } as const;
+
+    const status = sortBy
+      ? STATUS_MAP[sortBy as keyof typeof STATUS_MAP]
+      : undefined;
+
+    console.log(status);
+
     if (status) {
-      qb.andWhere('ticket.status = :status', { status });
+      qb.andWhere(`ticket.status = :status`, { status });
     }
 
-    qb.orderBy('ticket.createdAt', sortOrder);
+    const data = await qb.getRawMany();
 
-    const rows: TicketRow[] = await qb.getRawMany();
-
-    const normalizedRows: NormalizedTicket[] = rows.map((r) => ({
-      id: r.id,
-      type: r.type,
-      status: r.status,
-      createdAt: r.createdat,
-      firstName: r.firstname,
-      lastName: r.lastname,
-    }));
-
-    const results: Array<
-      SortResult<NormalizedTicket> & { algorithm: SortAlgorithm }
-    > = [];
-
-    const sortOrderNormalized = order === 'asc' ? 'asc' : 'desc';
-
-    for (const algorithm of algorithms) {
-      const evaluated = this.sorter.sort(
-        normalizedRows,
-        algorithm,
-        sortOrderNormalized,
-      );
-
-      results.push({
-        algorithm,
-        ...evaluated,
-      });
-    }
-
-    return results;
+    return this.sorter.sort(data, 'heapSort', order);
   }
 
   async geAllUserTickets(userId: string, query?: string) {

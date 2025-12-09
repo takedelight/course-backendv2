@@ -16,27 +16,22 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/set-role.decoratos';
 import { type Request } from 'express';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { SortAlgorithm } from 'src/sorter/sorter.service';
+import { type SortAlgorithm, type SortOrder } from 'src/sorter/sorter.service';
 
 @UseGuards(JwtGuard, RolesGuard)
 @Controller('ticket')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
-  c;
 
   @Roles('operator')
   @Get('all')
   async getAll(
     @Query('q') q: string,
-    @Query('order') order: string,
+    @Query('order') order: SortOrder,
     @Query('sort_by') sortBy: string,
-    @Query('algorithms') algorithmsRaw: string,
+    @Query('algorithms') algs,
   ) {
-    const algorithms = algorithmsRaw
-      ?.split(',')
-      .map((a) => a.trim()) as SortAlgorithm[];
-
-    return this.ticketService.getAllTickets(q, order, sortBy, algorithms);
+    return this.ticketService.getAllTickets(q, order, sortBy);
   }
 
   @Get('')
