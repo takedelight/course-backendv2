@@ -16,7 +16,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/set-role.decoratos';
 import { type Request } from 'express';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { type SortAlgorithm, type SortOrder } from 'src/sorter/sorter.service';
+import { type SortOrder } from 'src/sorter/sorter.service';
 
 @UseGuards(JwtGuard, RolesGuard)
 @Controller('ticket')
@@ -29,7 +29,6 @@ export class TicketController {
     @Query('q') q: string,
     @Query('order') order: SortOrder,
     @Query('sort_by') sortBy: string,
-    @Query('algorithms') algs,
   ) {
     return this.ticketService.getAllTickets(q, order, sortBy);
   }
@@ -68,5 +67,17 @@ export class TicketController {
   @Post('/reject/:id')
   async reject(@Param('id') id: number) {
     return await this.ticketService.rejectTicket(id);
+  }
+
+  @Roles('operator')
+  @Get('/comparison')
+  async comparison(
+    @Query('quantity') quantity: number,
+    @Query('algs[]') algs: string[] | string,
+    @Query('order') order: SortOrder,
+  ) {
+    const algorithms = Array.isArray(algs) ? algs : [algs];
+
+    return this.ticketService.comparisonTickets(quantity, order, algorithms);
   }
 }

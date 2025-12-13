@@ -17,6 +17,17 @@ export class TicketService {
     this.faker = new Faker({ locale: uk });
   }
 
+  private readonly types = [
+    'Реєстрація авто',
+    'Перереєстрація авто',
+    'Зняття з обліку',
+    'Отримання номерів',
+    'Видача дубліката техпаспорта',
+    'Заміна водійського посвідчення',
+    'Отримання довідки про технічний стан',
+    'Заміна номерних знаків',
+  ];
+
   async getAllTickets(q?: string, order?: SortOrder, sortBy?: string) {
     const qb = this.ticketRepository
       .createQueryBuilder('ticket')
@@ -46,8 +57,6 @@ export class TicketService {
     const status = sortBy
       ? STATUS_MAP[sortBy as keyof typeof STATUS_MAP]
       : undefined;
-
-    console.log(status);
 
     if (status) {
       qb.andWhere(`ticket.status = :status`, { status });
@@ -137,14 +146,20 @@ export class TicketService {
     }
   }
 
-  private readonly types = [
-    'Реєстрація авто',
-    'Перереєстрація авто',
-    'Зняття з обліку',
-    'Отримання номерів',
-    'Видача дубліката техпаспорта',
-    'Заміна водійського посвідчення',
-    'Отримання довідки про технічний стан',
-    'Заміна номерних знаків',
-  ];
+  async comparisonTickets(
+    quantity: number,
+    order: SortOrder = 'desc',
+    algs: string[] = ['heapSort'],
+  ) {
+    const tickets = await this.ticketRepository.find({
+      take: quantity,
+    });
+
+    const result = algs.map((algorithm) => ({
+      algorithm,
+      sorted: this.sorter.sort(tickets, algorithm, order),
+    }));
+
+    return result;
+  }
 }

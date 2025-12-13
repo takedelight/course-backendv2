@@ -10,7 +10,7 @@ export type SortOrder = 'asc' | 'desc';
 
 export interface SortResult<T> {
   result: T[];
-  time: number;
+  time: string;
   operations: number;
 }
 
@@ -18,7 +18,7 @@ export interface SortResult<T> {
 export class SorterService {
   sort<T extends SortableItem>(
     items: T[],
-    algorithm: SortAlgorithm,
+    algorithm: string,
     order: SortOrder = 'asc',
   ): SortResult<T> {
     switch (algorithm) {
@@ -29,7 +29,7 @@ export class SorterService {
       case 'heapSort':
         return this.heapSort(items, order);
       default:
-        return { result: items, time: 0, operations: 0 };
+        return { result: items, time: '0ms', operations: 0 };
     }
   }
 
@@ -58,7 +58,11 @@ export class SorterService {
 
     const end = performance.now();
 
-    return { result: arr, time: end - start, operations };
+    return {
+      result: arr,
+      time: `${(end - start).toFixed(2)}ms`,
+      operations,
+    };
   }
 
   private mergeSort<T extends SortableItem>(
@@ -98,7 +102,11 @@ export class SorterService {
     const sorted = mergeSortRecursive(items);
     const end = performance.now();
 
-    return { result: sorted, time: end - start, operations };
+    return {
+      result: sorted,
+      time: `${(end - start).toFixed(2)}ms`,
+      operations,
+    };
   }
 
   private heapSort<T extends SortableItem>(
@@ -129,7 +137,11 @@ export class SorterService {
 
     const end = performance.now();
 
-    return { result, time: end - start, operations };
+    return {
+      result,
+      time: `${(end - start).toFixed(2)}ms`,
+      operations,
+    };
   }
 
   private compareDates(
