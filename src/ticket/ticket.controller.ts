@@ -73,10 +73,13 @@ export class TicketController {
   @Get('/comparison')
   async comparison(
     @Query('quantity') quantity: number,
-    @Query('algs[]') algs: string[] | string,
+    @Query('algs') algs: string[] | string,
     @Query('order') order: SortOrder,
+    @Req() req: Request,
   ) {
     const algorithms = Array.isArray(algs) ? algs : [algs];
+
+    console.log(req.url);
 
     return this.ticketService.comparisonTickets(quantity, order, algorithms);
   }

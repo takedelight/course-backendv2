@@ -155,10 +155,22 @@ export class TicketService {
       take: quantity,
     });
 
-    const result = algs.map((algorithm) => ({
-      algorithm,
-      sorted: this.sorter.sort(tickets, algorithm, order),
-    }));
+
+    const result = algs.map((algorithm) => {
+      const {
+        result: sorted,
+        time,
+        operations,
+      } = this.sorter.sort(tickets, algorithm, order);
+
+      return {
+        algorithm,
+
+        time,
+        operations,
+      };
+    });
+
 
     return result;
   }

@@ -5,12 +5,17 @@ export interface SortableItem {
   createdAt: string | Date;
 }
 
-export type SortAlgorithm = 'bubbleSort' | 'mergeSort' | 'heapSort';
+export type SortAlgorithm =
+  | 'bubbleSort'
+  | 'mergeSort'
+  | 'heapSort'
+  | 'selectionSort';
+
 export type SortOrder = 'asc' | 'desc';
 
 export interface SortResult<T> {
   result: T[];
-  time: string;
+  time: number;
   operations: number;
 }
 
@@ -28,8 +33,10 @@ export class SorterService {
         return this.mergeSort(items, order);
       case 'heapSort':
         return this.heapSort(items, order);
+      case 'selectionSort':
+        return this.selectionSort(items, order);
       default:
-        return { result: items, time: '0ms', operations: 0 };
+        return { result: items, time: 0, operations: 0 };
     }
   }
 
@@ -60,7 +67,44 @@ export class SorterService {
 
     return {
       result: arr,
-      time: `${(end - start).toFixed(2)}ms`,
+      time: Number((end - start).toFixed(2)),
+      operations,
+    };
+  }
+
+  private selectionSort<T extends SortableItem>(
+    items: T[],
+    order: SortOrder,
+  ): SortResult<T> {
+    const arr = [...items];
+    let operations = 0;
+
+    const start = performance.now();
+
+    for (let i = 0; i < arr.length - 1; i++) {
+      let minIndex = i;
+
+      for (let j = i + 1; j < arr.length; j++) {
+        operations++;
+        if (
+          this.compareDates(arr[j].createdAt, arr[minIndex].createdAt, order) <
+          0
+        ) {
+          minIndex = j;
+        }
+      }
+
+      if (minIndex !== i) {
+        operations++;
+        [arr[i], arr[minIndex]] = [arr[minIndex], arr[i]];
+      }
+    }
+
+    const end = performance.now();
+
+    return {
+      result: arr,
+      time: Number((end - start).toFixed(2)),
       operations,
     };
   }
@@ -104,7 +148,7 @@ export class SorterService {
 
     return {
       result: sorted,
-      time: `${(end - start).toFixed(2)}ms`,
+      time: Number((end - start).toFixed(2)),
       operations,
     };
   }
@@ -139,7 +183,7 @@ export class SorterService {
 
     return {
       result,
-      time: `${(end - start).toFixed(2)}ms`,
+      time: Number((end - start).toFixed(2)),
       operations,
     };
   }
