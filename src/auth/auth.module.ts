@@ -6,7 +6,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserService } from 'src/user/user.service';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { JwtStrategy } from './strategy/jwt.strategy';
 import { ConfigService } from '@nestjs/config';
 
 @Module({
@@ -21,6 +20,6 @@ import { ConfigService } from '@nestjs/config';
     }),
     PassportModule,
   ],
-  providers: [AuthService, UserService, JwtStrategy],
+  providers: [AuthService, UserService],
 })
 export class AuthModule {}

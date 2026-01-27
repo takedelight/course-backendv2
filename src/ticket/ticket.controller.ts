@@ -11,14 +11,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TicketService } from './ticket.service';
-import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Roles } from 'src/auth/decorators/set-role.decoratos';
 import { type Request } from 'express';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { type SortOrder } from 'src/sorter/sorter.service';
+import { Roles } from 'src/auth/decorators/set-role.decoratos';
 
-@UseGuards(JwtGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('ticket')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
