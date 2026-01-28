@@ -107,32 +107,6 @@ export class UserService {
     return await this.userRepository.save(newUser);
   }
 
-  async generateUsers(count: number, password: string) {
-    const users: User[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const user = this.userRepository.create({
-        email: this.faker.internet
-          .email({ provider: 'gmail.com' })
-          .toLowerCase(),
-        firstName: this.faker.person.firstName(),
-        lastName: this.faker.person.lastName(),
-        role: UserRole.USER,
-        password: await hash(password),
-        createdAt: this.faker.date.between({
-          from: new Date('2024-01-01'),
-          to: new Date('2025-11-04'),
-        }),
-      });
-      users.push(user);
-    }
-
-    await this.userRepository.save(users);
-    return {
-      message: `Користувачів у кількості ${users.length} успішно згенеровано`,
-    };
-  }
-
   async update(userId: string, dto: UpdateUserDto) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -157,15 +131,5 @@ export class UserService {
     await this.userRepository.save(updated);
 
     return { message: 'Ваші данні оновлено.' };
-  }
-
-  async deleteAllUsers() {
-    const users = await this.userRepository.find({
-      where: { role: Not(UserRole.OPERATOR) },
-    });
-
-    if (users.length === 0) return;
-
-    await this.userRepository.remove(users);
   }
 }

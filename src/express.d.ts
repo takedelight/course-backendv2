@@ -2,7 +2,8 @@ declare module 'express' {
   interface Request {
     user: JwtPayload;
     cookies: {
-      refresh_token?: string;
+      userId?: string;
+      userRole?: string;
     };
   }
 }

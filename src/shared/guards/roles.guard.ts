@@ -1,10 +1,8 @@
 import {
   CanActivate,
-  createParamDecorator,
   ExecutionContext,
   ForbiddenException,
   Injectable,
-  SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
@@ -22,9 +20,14 @@ export class RolesGuard implements CanActivate {
     }
 
     const request: Request = context.switchToHttp().getRequest();
-    const user = request.user;
 
-    if (!roles.includes(user.role)) {
+    const userRole = request.cookies?.userRole;
+
+    if (!userRole) {
+      throw new ForbiddenException('Access denied: no role found');
+    }
+
+    if (!roles.includes(userRole)) {
       throw new ForbiddenException('Access denied: insufficient permissions');
     }
 

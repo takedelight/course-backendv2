@@ -11,11 +11,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TicketService } from './ticket.service';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { RolesGuard } from 'src/shared/guards/roles.guard';
 import { type Request } from 'express';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { type SortOrder } from 'src/sorter/sorter.service';
-import { Roles } from 'src/auth/decorators/set-role.decoratos';
+import { Roles } from 'src/shared/decorators/set-role.decoratos';
 
 @UseGuards(RolesGuard)
 @Controller('ticket')
@@ -77,8 +77,6 @@ export class TicketController {
     @Req() req: Request,
   ) {
     const algorithms = Array.isArray(algs) ? algs : [algs];
-
-    console.log(req.url);
 
     return this.ticketService.comparisonTickets(quantity, order, algorithms);
   }

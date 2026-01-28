@@ -28,6 +28,11 @@ export class AuthService {
       sameSite: 'lax',
     });
 
+    response.cookie('userRole', user.role, {
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+
     response.json({ message: 'Успішний вхід.' });
   }
 
@@ -39,11 +44,18 @@ export class AuthService {
       sameSite: 'lax',
     });
 
+    response.cookie('userRole', user.role, {
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+
     response.json({ message: 'Успішна реєстрація.' });
   }
 
   logout(response: Response) {
     response.clearCookie('userId');
+    response.clearCookie('userRole');
+
     response.json({ message: 'Успішний вихід.' });
   }
 }
