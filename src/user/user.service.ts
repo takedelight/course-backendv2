@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository } from 'typeorm';
-import { User, UserRole } from './entities/user.entity';
+import { FindOptionsSelect, In, Repository } from 'typeorm';
+import { User } from './entities/user.entity';
 import { hash } from 'argon2';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Faker, uk } from '@faker-js/faker';
@@ -21,17 +21,19 @@ export class UserService {
     this.faker = new Faker({ locale: uk });
   }
 
+  private readonly select: FindOptionsSelect<User> = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    email: true,
+    tickets: false,
+    role: true,
+    createdAt: true,
+    updatedAt: true,
+  };
   async getAll() {
     return await this.userRepository.find({
-      select: [
-        'createdAt',
-        'email',
-        'id',
-        'firstName',
-        'updatedAt',
-        'lastName',
-        'role',
-      ],
+      select: this.select,
     });
   }
 
@@ -51,15 +53,7 @@ export class UserService {
   async getById(id: string) {
     const user = await this.userRepository.findOne({
       where: { id },
-      select: [
-        'createdAt',
-        'email',
-        'id',
-        'firstName',
-        'updatedAt',
-        'lastName',
-        'role',
-      ],
+      select: this.select,
     });
 
     if (!user) {
@@ -85,15 +79,7 @@ export class UserService {
   async create(dto: CreateUserDto) {
     const user = await this.userRepository.findOne({
       where: { email: dto.email },
-      select: [
-        'createdAt',
-        'email',
-        'id',
-        'firstName',
-        'updatedAt',
-        'lastName',
-        'role',
-      ],
+      select: this.select,
     });
 
     if (user) {

@@ -7,7 +7,6 @@ import {
   ParseIntPipe,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { TicketService } from './ticket.service';
@@ -16,6 +15,7 @@ import { type Request } from 'express';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { type SortOrder } from 'src/sorter/sorter.service';
 import { Roles } from 'src/shared/decorators/set-role.decoratos';
+import { ExtractUserId } from 'src/shared/decorators/extract-user-id.decorator';
 
 @UseGuards(RolesGuard)
 @Controller('ticket')
@@ -33,13 +33,19 @@ export class TicketController {
   }
 
   @Get('')
-  async getByUserId(@Req() request: Request, @Query('q') query: string) {
-    return await this.ticketService.geAllUserTickets(request.user.sub, query);
+  async getByUserId(
+    @Query('q') query: string,
+    @ExtractUserId() userId: string,
+  ) {
+    return await this.ticketService.geAllUserTickets(userId, query);
   }
 
   @Post('')
-  async createTicket(@Body() body: CreateTicketDto, @Req() request: Request) {
-    return await this.ticketService.createTicket(body, request.user.sub);
+  async createTicket(
+    @Body() body: CreateTicketDto,
+    @ExtractUserId() userId: string,
+  ) {
+    return await this.ticketService.createTicket(body, userId);
   }
 
   @Post('/generate/:id/:count')
@@ -74,7 +80,6 @@ export class TicketController {
     @Query('quantity') quantity: number,
     @Query('algs') algs: string[] | string,
     @Query('order') order: SortOrder,
-    @Req() req: Request,
   ) {
     const algorithms = Array.isArray(algs) ? algs : [algs];
 

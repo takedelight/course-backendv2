@@ -4,10 +4,8 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
@@ -17,9 +15,10 @@ import { type Request } from 'express';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ExtractUserId } from 'src/shared/decorators/extract-user-id.decorator';
+import { AuthGuard } from 'src/shared/guards/auth.guard';
 
 @Controller('user')
-@UseGuards(RolesGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

@@ -23,15 +23,7 @@ export class AuthService {
   async login(dto: LoginDto, response: Response) {
     const user = await this.validateUser(dto.email, dto.password);
 
-    response.cookie('userId', user.id, {
-      httpOnly: true,
-      sameSite: 'lax',
-    });
-
-    response.cookie('userRole', user.role, {
-      httpOnly: true,
-      sameSite: 'lax',
-    });
+    this.setCookie(response, user.id, user.role);
 
     response.json({ message: 'Успішний вхід.' });
   }
@@ -39,15 +31,7 @@ export class AuthService {
   async register(dto: RegisterDto, response: Response) {
     const user = await this.userService.create(dto);
 
-    response.cookie('userId', user.id, {
-      httpOnly: true,
-      sameSite: 'lax',
-    });
-
-    response.cookie('userRole', user.role, {
-      httpOnly: true,
-      sameSite: 'lax',
-    });
+    this.setCookie(response, user.id, user.role);
 
     response.json({ message: 'Успішна реєстрація.' });
   }
@@ -57,5 +41,19 @@ export class AuthService {
     response.clearCookie('userRole');
 
     response.json({ message: 'Успішний вихід.' });
+  }
+
+  private setCookie(response: Response, userId: string, role: string) {
+    response.cookie('userId', userId, {
+      httpOnly: true,
+      sameSite: 'lax',
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+
+    response.cookie('userRole', role, {
+      httpOnly: true,
+      sameSite: 'lax',
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
   }
 }
