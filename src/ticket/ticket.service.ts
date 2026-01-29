@@ -88,13 +88,14 @@ export class TicketService {
   async createTicket(dto: CreateTicketDto, userId: string) {
     const ticket = this.ticketRepository.create({
       type: dto.type,
+      status: StatementStatus.PENDING,
       user: { id: userId },
     });
     return await this.ticketRepository.save(ticket);
   }
 
-  async delete(id: number) {
-    return await this.ticketRepository.delete(id);
+  async delete() {
+    return await this.ticketRepository.clear();
   }
 
   async completeTicket(id: number) {
@@ -128,17 +129,13 @@ export class TicketService {
 
   async fakerCreateTickets(userId: string, count: number) {
     for (let i = 0; i < count; i++) {
-      const status = this.faker.helpers.arrayElement(
-        Object.values(StatementStatus),
-      );
-
       const ticket = this.ticketRepository.create({
         type: this.faker.helpers.arrayElement(this.types),
-        status,
+        status: StatementStatus.PENDING,
         user: { id: userId },
         createdAt: this.faker.date.between({
-          from: new Date('2024-05-01'),
-          to: new Date('2025-11-04'),
+          from: new Date('2025-12-01'),
+          to: new Date('2026-1-20'),
         }),
       });
 

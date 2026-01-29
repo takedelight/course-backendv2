@@ -57,9 +57,9 @@ export class TicketController {
   }
 
   @Roles('operator')
-  @Delete('/:id')
-  async delete(@Param('id') id: number) {
-    return await this.ticketService.delete(id);
+  @Delete('')
+  async delete() {
+    return await this.ticketService.delete();
   }
 
   @Roles('operator')
