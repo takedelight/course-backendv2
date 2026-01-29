@@ -28,7 +28,13 @@ export class TicketService {
     'Заміна номерних знаків',
   ];
 
-  async getAllTickets(q?: string, order?: SortOrder, sortBy?: string) {
+  async getAllTickets(
+    q?: string,
+    order?: SortOrder,
+    sortBy?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     const qb = this.ticketRepository
       .createQueryBuilder('ticket')
       .leftJoin('ticket.user', 'user')
@@ -62,9 +68,20 @@ export class TicketService {
       qb.andWhere(`ticket.status = :status`, { status });
     }
 
+    const total = await qb.getCount();
+
+    qb.offset((page - 1) * limit).limit(limit);
+
     const data = await qb.getRawMany();
 
-    return this.sorter.sort(data, 'heapSort', order);
+    const sortedData = this.sorter.sort(data, 'heapSort', order);
+
+    return {
+      data: sortedData,
+      total,
+      page,
+      lastPage: Math.ceil(total / limit),
+    };
   }
 
   async geAllUserTickets(userId: string, query?: string) {

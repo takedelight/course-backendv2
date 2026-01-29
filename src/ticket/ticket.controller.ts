@@ -28,8 +28,10 @@ export class TicketController {
     @Query('q') q: string,
     @Query('order') order: SortOrder,
     @Query('sort_by') sortBy: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
   ) {
-    return this.ticketService.getAllTickets(q, order, sortBy);
+    return this.ticketService.getAllTickets(q, order, sortBy, +page, +limit);
   }
 
   @Get('')
