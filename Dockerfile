@@ -13,4 +13,4 @@ RUN npm run build
 
 EXPOSE 5000
 
-CMD ["npm", "run", "start:prod"]
+CMD ["sh", "-c", "npx ts-node -r tsconfig-paths/register src/seed.ts && npm run start:prod"]
