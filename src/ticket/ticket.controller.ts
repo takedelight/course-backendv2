@@ -7,18 +7,17 @@ import {
   ParseIntPipe,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { TicketService } from './ticket.service';
-import { JwtGuard } from 'src/auth/guards/jwt.guard';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Roles } from 'src/auth/decorators/set-role.decoratos';
+import { RolesGuard } from 'src/shared/guards/roles.guard';
 import { type Request } from 'express';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { type SortOrder } from 'src/sorter/sorter.service';
+import { Roles } from 'src/shared/decorators/set-role.decoratos';
+import { ExtractUserId } from 'src/shared/decorators/extract-user-id.decorator';
 
-@UseGuards(JwtGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('ticket')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
@@ -29,18 +28,26 @@ export class TicketController {
     @Query('q') q: string,
     @Query('order') order: SortOrder,
     @Query('sort_by') sortBy: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
   ) {
-    return this.ticketService.getAllTickets(q, order, sortBy);
+    return this.ticketService.getAllTickets(q, order, sortBy, +page, +limit);
   }
 
   @Get('')
-  async getByUserId(@Req() request: Request, @Query('q') query: string) {
-    return await this.ticketService.geAllUserTickets(request.user.sub, query);
+  async getByUserId(
+    @Query('q') query: string,
+    @ExtractUserId() userId: string,
+  ) {
+    return await this.ticketService.geAllUserTickets(userId, query);
   }
 
   @Post('')
-  async createTicket(@Body() body: CreateTicketDto, @Req() request: Request) {
-    return await this.ticketService.createTicket(body, request.user.sub);
+  async createTicket(
+    @Body() body: CreateTicketDto,
+    @ExtractUserId() userId: string,
+  ) {
+    return await this.ticketService.createTicket(body, userId);
   }
 
   @Post('/generate/:id/:count')
@@ -52,9 +59,9 @@ export class TicketController {
   }
 
   @Roles('operator')
-  @Delete('/:id')
-  async delete(@Param('id') id: number) {
-    return await this.ticketService.delete(id);
+  @Delete('')
+  async delete() {
+    return await this.ticketService.delete();
   }
 
   @Roles('operator')
@@ -75,11 +82,8 @@ export class TicketController {
     @Query('quantity') quantity: number,
     @Query('algs') algs: string[] | string,
     @Query('order') order: SortOrder,
-    @Req() req: Request,
   ) {
     const algorithms = Array.isArray(algs) ? algs : [algs];
-
-    console.log(req.url);
 
     return this.ticketService.comparisonTickets(quantity, order, algorithms);
   }

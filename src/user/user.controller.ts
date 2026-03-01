@@ -4,22 +4,21 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { JwtGuard } from 'src/auth/guards/jwt.guard';
-import { Roles } from 'src/auth/decorators/set-role.decoratos';
+import { RolesGuard } from 'src/shared/guards/roles.guard';
+import { Roles } from 'src/shared/decorators/set-role.decoratos';
 import { type Request } from 'express';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ExtractUserId } from 'src/shared/decorators/extract-user-id.decorator';
+import { AuthGuard } from 'src/shared/guards/auth.guard';
 
 @Controller('user')
-@UseGuards(RolesGuard)
-@UseGuards(JwtGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -27,6 +26,11 @@ export class UserController {
   @Roles('operator')
   async getAll() {
     return await this.userService.getAll();
+  }
+
+  @Get('/me')
+  async getUserById(@ExtractUserId() userId: string) {
+    return await this.userService.getById(userId);
   }
 
   @Patch('/update/:id')
@@ -46,23 +50,8 @@ export class UserController {
   }
 
   @Roles('operator')
-  @Post('/generate/:count')
-  async generateUsers(
-    @Param('count', ParseIntPipe) count: number,
-    @Body() dto: { password: string },
-  ) {
-    return this.userService.generateUsers(count, dto.password);
-  }
-
-  @Roles('operator')
   @Delete('/delete')
   async deleteMany(@Body() ids: string[]) {
     return await this.userService.deleteMany(ids);
-  }
-
-  @Roles('operator')
-  @Delete('/deleteAll')
-  async deleteAll() {
-    return await this.userService.deleteAllUsers();
   }
 }

@@ -28,7 +28,13 @@ export class TicketService {
     'Заміна номерних знаків',
   ];
 
-  async getAllTickets(q?: string, order?: SortOrder, sortBy?: string) {
+  async getAllTickets(
+    q?: string,
+    order?: SortOrder,
+    sortBy?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     const qb = this.ticketRepository
       .createQueryBuilder('ticket')
       .leftJoin('ticket.user', 'user')
@@ -62,9 +68,20 @@ export class TicketService {
       qb.andWhere(`ticket.status = :status`, { status });
     }
 
+    const total = await qb.getCount();
+
+    qb.offset((page - 1) * limit).limit(limit);
+
     const data = await qb.getRawMany();
 
-    return this.sorter.sort(data, 'heapSort', order);
+    const sortedData = this.sorter.sort(data, 'heapSort', order);
+
+    return {
+      data: sortedData,
+      total,
+      page,
+      lastPage: Math.ceil(total / limit),
+    };
   }
 
   async geAllUserTickets(userId: string, query?: string) {
@@ -88,13 +105,14 @@ export class TicketService {
   async createTicket(dto: CreateTicketDto, userId: string) {
     const ticket = this.ticketRepository.create({
       type: dto.type,
+      status: StatementStatus.PENDING,
       user: { id: userId },
     });
     return await this.ticketRepository.save(ticket);
   }
 
-  async delete(id: number) {
-    return await this.ticketRepository.delete(id);
+  async delete() {
+    return await this.ticketRepository.clear();
   }
 
   async completeTicket(id: number) {
@@ -128,17 +146,13 @@ export class TicketService {
 
   async fakerCreateTickets(userId: string, count: number) {
     for (let i = 0; i < count; i++) {
-      const status = this.faker.helpers.arrayElement(
-        Object.values(StatementStatus),
-      );
-
       const ticket = this.ticketRepository.create({
         type: this.faker.helpers.arrayElement(this.types),
-        status,
+        status: StatementStatus.PENDING,
         user: { id: userId },
         createdAt: this.faker.date.between({
-          from: new Date('2024-05-01'),
-          to: new Date('2025-11-04'),
+          from: new Date('2025-12-01'),
+          to: new Date('2026-1-20'),
         }),
       });
 
@@ -155,22 +169,14 @@ export class TicketService {
       take: quantity,
     });
 
-
     const result = algs.map((algorithm) => {
-      const {
-        result: sorted,
-        time,
-        operations,
-      } = this.sorter.sort(tickets, algorithm, order);
+      const { time, operations } = this.sorter.sort(tickets, algorithm, order);
 
       return {
-        algorithm,
-
-        time,
-        operations,
+        total: tickets.length,
+        result: { algorithm, time, operations },
       };
     });
-
 
     return result;
   }
