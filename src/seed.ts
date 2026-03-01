@@ -2,7 +2,7 @@ import { hash } from 'argon2';
 import * as dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
 import { Ticket } from './ticket/entities/ticket.entity';
-import { User } from './user/entities/user.entity';
+import { User, UserRole } from './user/entities/user.entity';
 dotenv.config();
 
 const AppDataSource = new DataSource({
@@ -29,6 +29,7 @@ const runSeed = async () => {
       firstName: 'Admin',
       lastName: 'Admin',
       email: 'admin@admin.com',
+      role: UserRole.OPERATOR,
       password: passwordHash,
     };
 
