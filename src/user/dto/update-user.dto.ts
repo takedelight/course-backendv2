@@ -1,5 +1,5 @@
+import { UserRole } from '@prisma/client';
 import { IsEmail, IsOptional, IsString } from 'class-validator';
-import { UserRole } from '../entities/user.entity';
 
 export class UpdateUserDto {
   @IsOptional()

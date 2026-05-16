@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  firstName String   @map("first_name")
+  lastName  String   @map("second_name")
+  email     String   @unique
+  password  String
+  role      UserRole @default(USER)
+
+
+  tickets   Ticket[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user")
+}
+
+model Ticket {
+  id        Int          @id @default(autoincrement())
+  type      String
+  VIN       String
+  status    TicketStatus @default(PENDING)
+
+  userId    String       @map("user_id")
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  completedAt DateTime?  @map("completed_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  @@map("ticket")
+}
+
+
+enum UserRole {
+  OPERATOR @map("operator")
+  USER     @map("user")
+}
+
+enum TicketStatus {
+  PENDING @map("В обробці")
+  SUCCESS @map("Виконано")
+  REJECT  @map("Відхилено")
+}

@@ -1,10 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Ticket, TICKET_STATUS } from './entities/ticket.entity';
-import { Repository } from 'typeorm';
-import { CreateTicketDto } from './dto/create-ticket.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { SorterService, SortOrder } from 'src/sorter/sorter.service';
-import { STATUS_MAP } from 'src/shared/types/ticket.type';
+import { CreateTicketDto } from './dto/create-ticket.dto';
+import { Prisma, TicketStatus } from '@prisma/client';
 
 interface QueryParams {
   q?: string;
@@ -17,8 +15,7 @@ interface QueryParams {
 @Injectable()
 export class TicketService {
   constructor(
-    @InjectRepository(Ticket)
-    private readonly ticketRepository: Repository<Ticket>,
+    private readonly prisma: PrismaService,
     private readonly sorter: SorterService,
   ) {}
 
@@ -27,39 +24,44 @@ export class TicketService {
     const limit = params.limit ?? 10;
     const order = params.order;
 
-    const qb = this.ticketRepository
-      .createQueryBuilder('ticket')
-      .leftJoin('ticket.user', 'user')
-      .select([
-        'ticket.id AS "id"',
-        'ticket.type AS "type"',
-        'ticket.VIN AS "vin"',
-        'ticket.status AS "status"',
-        'ticket.createdAt AS "createdAt"',
-        'user.firstName AS "firstName"',
-        'user.lastName AS "lastName"',
-      ]);
+    const where: Prisma.TicketWhereInput = {};
 
     if (params.q) {
-      qb.andWhere(
-        `(ticket.type ILIKE :q OR user.firstName ILIKE :q OR user.lastName ILIKE :q)`,
-        { q: `%${params.q}%` },
-      );
+      where.OR = [
+        { type: { contains: params.q, mode: 'insensitive' } },
+        { user: { firstName: { contains: params.q, mode: 'insensitive' } } },
+        { user: { lastName: { contains: params.q, mode: 'insensitive' } } },
+        { VIN: { contains: params.q, mode: 'insensitive' } },
+      ];
     }
 
-    const status = params.sortBy
-      ? STATUS_MAP[params.sortBy as keyof typeof STATUS_MAP]
-      : undefined;
+    const [rawTickets, total] = await this.prisma.$transaction([
+      this.prisma.ticket.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          id: true,
+          type: true,
+          VIN: true,
+          status: true,
+          createdAt: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      }),
+      this.prisma.ticket.count({ where }),
+    ]);
 
-    if (status) {
-      qb.andWhere(`ticket.status = :status`, { status });
-    }
-
-    const total = await qb.getCount();
-
-    qb.offset((page - 1) * limit).limit(limit);
-
-    const data = await qb.getRawMany();
+    const data = rawTickets.map(({ user, ...ticket }) => ({
+      ...ticket,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+    }));
 
     const sortedData = this.sorter.sort(data, 'heapSort', order);
 
@@ -71,65 +73,89 @@ export class TicketService {
     };
   }
 
-  async geAllUserTickets(userId: string, query?: string) {
-    const qb = this.ticketRepository
-      .createQueryBuilder('ticket')
-      .leftJoin('ticket.user', 'user')
-      .where('user.id = :userId', { userId });
+  async geAllUserTickets(userId: string, params: QueryParams) {
+    const where: Prisma.TicketWhereInput = {
+      userId,
+    };
 
-    if (query) {
-      qb.andWhere(
-        `CAST(ticket.id AS TEXT) ILIKE :q
-   OR ticket.type ILIKE :q
-   OR user.email ILIKE :q`,
-        { q: `%${query}%` },
-      );
+    if (params?.q) {
+      where.OR = [
+        { type: { contains: params.q, mode: 'insensitive' } },
+        { VIN: { contains: params.q, mode: 'insensitive' } },
+        { user: { email: { contains: params.q, mode: 'insensitive' } } },
+      ];
     }
 
-    return await qb.getMany();
+    const status = params?.sortBy
+      ? TicketStatus[params.sortBy as keyof typeof TicketStatus]
+      : undefined;
+
+    if (status) {
+      where.status = status;
+    }
+
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 10;
+    const order = params?.order ?? 'desc';
+
+    const [rawTickets, total] = await this.prisma.$transaction([
+      this.prisma.ticket.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { user: true },
+      }),
+      this.prisma.ticket.count({ where }),
+    ]);
+
+    const sortedData = this.sorter.sort(rawTickets, 'heapSort', order);
+
+    return {
+      data: sortedData,
+      total,
+      page,
+      lastPage: Math.ceil(total / limit),
+    };
   }
 
   async createTicket(userId: string, dto: CreateTicketDto) {
-    const ticket = this.ticketRepository.create({
-      type: dto.type,
-      status: TICKET_STATUS.PENDING,
-      VIN: dto.VIN,
-      user: { id: userId },
+    return await this.prisma.ticket.create({
+      data: {
+        type: dto.type,
+        status: 'PENDING',
+        VIN: dto.VIN,
+        userId,
+      },
     });
-    return await this.ticketRepository.save(ticket);
   }
 
   async delete() {
-    return await this.ticketRepository.clear();
+    return await this.prisma.ticket.deleteMany();
   }
 
   async completeTicket(id: number) {
-    const ticket = await this.ticketRepository.findOne({
-      where: { id },
-    });
-
-    if (!ticket) {
-      throw new NotFoundException('Ticket not found');
+    try {
+      return await this.prisma.ticket.update({
+        where: { id },
+        data: {
+          status: 'SUCCESS',
+          completedAt: new Date(),
+        },
+      });
+    } catch {
+      throw new NotFoundException('Користувача з таким ID не існує.');
     }
-
-    const complitedTicket = {
-      ...ticket,
-      status: TICKET_STATUS.SUCCESS,
-      completedAt: new Date(),
-    };
-    return await this.ticketRepository.save(complitedTicket);
   }
 
   async rejectTicket(id: number) {
-    const ticket = await this.ticketRepository.findOne({ where: { id } });
-    if (!ticket) {
-      throw new NotFoundException('Ticket not found');
+    try {
+      return await this.prisma.ticket.update({
+        where: { id },
+        data: { status: 'REJECT' },
+      });
+    } catch {
+      throw new NotFoundException('Користувача з таким ID не існує.');
     }
-    const complitedTicket = {
-      ...ticket,
-      status: TICKET_STATUS.REJECT,
-    };
-    return await this.ticketRepository.save(complitedTicket);
   }
 
   async comparisonTickets(
@@ -137,19 +163,16 @@ export class TicketService {
     order: SortOrder = 'desc',
     algs: string[] = ['heapSort'],
   ) {
-    const tickets = await this.ticketRepository.find({
+    const tickets = await this.prisma.ticket.findMany({
       take: quantity,
     });
 
-    const result = algs.map((algorithm) => {
+    return algs.map((algorithm) => {
       const { time, operations } = this.sorter.sort(tickets, algorithm, order);
-
       return {
         total: tickets.length,
         result: { algorithm, time, operations },
       };
     });
-
-    return result;
   }
 }

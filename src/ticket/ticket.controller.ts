@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Post,
   Query,
   UseGuards,
@@ -31,15 +30,16 @@ export class TicketController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
   ) {
-    return this.ticketService.getAllTickets(q, order, sortBy, +page, +limit);
+    return this.ticketService.getAllTickets({ q, order, sortBy, page, limit });
   }
 
   @Get('')
   async getByUserId(
-    @Query('q') query: string,
     @ExtractUserId() userId: string,
+    @Query('q') q: string,
+    @Query('q') order: SortOrder,
   ) {
-    return await this.ticketService.geAllUserTickets(userId, query);
+    return await this.ticketService.geAllUserTickets(userId, { q, order });
   }
 
   @Post('')
@@ -47,15 +47,7 @@ export class TicketController {
     @Body() body: CreateTicketDto,
     @ExtractUserId() userId: string,
   ) {
-    return await this.ticketService.createTicket(body, userId);
-  }
-
-  @Post('/generate/:id/:count')
-  async generate(
-    @Param('id') id: string,
-    @Param('count', ParseIntPipe) count: number,
-  ) {
-    return this.ticketService.fakerCreateTickets(id, count);
+    return await this.ticketService.createTicket(userId, body);
   }
 
   @Roles('operator')

@@ -4,24 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsSelect, In, Repository } from 'typeorm';
-import { User } from './entities/user.entity';
 import { hash } from 'argon2';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Faker, uk } from '@faker-js/faker';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class UserService {
-  readonly faker: Faker;
-
-  constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
-  ) {
-    this.faker = new Faker({ locale: uk });
-  }
-
-  private readonly select: FindOptionsSelect<User> = {
+  private readonly select = {
     id: true,
     firstName: true,
     lastName: true,
@@ -31,53 +20,52 @@ export class UserService {
     createdAt: true,
     updatedAt: true,
   };
+
+  constructor(private readonly prismaService: PrismaService) {}
+
   async getAll() {
-    return await this.userRepository.find({
+    return this.prismaService.user.findMany({
       select: this.select,
     });
   }
 
   async getByEmail(email: string) {
-    const user = await this.userRepository.findOne({
+    const user = await this.prismaService.user.findUnique({
       where: { email },
     });
 
     if (!user) {
       throw new NotFoundException(
-        'Користувача з такою електроною поштою не існує',
+        'Користувача з такою електронною поштою не існує.',
       );
     }
 
     return user;
   }
-  async getById(id: string) {
-    const user = await this.userRepository.findOne({
-      where: { id },
+
+  async getById(userId: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
       select: this.select,
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Користувача з таким ID не існує.');
     }
 
     return user;
   }
 
-  async delete(id: string) {
-    const user = await this.getById(id);
-    await this.userRepository.remove(user);
+  async delete(userId: string) {
+    await this.prismaService.user.delete({
+      where: { id: userId },
+    });
 
-    return { message: 'Користувача видаленно.' };
-  }
-
-  async deleteMany(ids: string[]) {
-    await this.userRepository.delete({ id: In(ids) });
-
-    return { message: 'Користувачів видаленно.' };
+    return { message: 'Користувача видалено.' };
   }
 
   async create(dto: CreateUserDto) {
-    const user = await this.userRepository.findOne({
+    const user = await this.prismaService.user.findUnique({
       where: { email: dto.email },
       select: this.select,
     });
@@ -86,24 +74,25 @@ export class UserService {
       throw new ConflictException('Користувач з таким email вже існує.');
     }
 
-    const newUser = this.userRepository.create({
-      ...dto,
-      password: await hash(dto.password),
+    return await this.prismaService.user.create({
+      data: {
+        ...dto,
+        password: await hash(dto.password),
+      },
     });
-    return await this.userRepository.save(newUser);
   }
 
   async update(userId: string, dto: UpdateUserDto) {
-    const user = await this.userRepository.findOne({
+    const user = await this.prismaService.user.findUnique({
       where: { id: userId },
     });
 
     if (!user) {
-      throw new NotFoundException('Користувача з таким id не існує.');
+      throw new NotFoundException('Користувача з таким ID не існує.');
     }
 
     if (dto.email && dto.email !== user.email) {
-      const existing = await this.userRepository.findOne({
+      const existing = await this.prismaService.user.findUnique({
         where: { email: dto.email },
       });
 
@@ -112,10 +101,13 @@ export class UserService {
       }
     }
 
-    const updated = this.userRepository.merge(user, dto);
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        ...dto,
+      },
+    });
 
-    await this.userRepository.save(updated);
-
-    return { message: 'Ваші данні оновлено.' };
+    return { message: 'Ваші дані оновлено.' };
   }
 }

@@ -48,10 +48,4 @@ export class UserController {
   async create(@Body() dto: CreateUserDto) {
     return await this.userService.create(dto);
   }
-
-  @Roles('operator')
-  @Delete('/delete')
-  async deleteMany(@Body() ids: string[]) {
-    return await this.userService.deleteMany(ids);
-  }
 }
