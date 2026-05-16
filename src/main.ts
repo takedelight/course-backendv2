@@ -4,14 +4,30 @@ import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
+  app.setGlobalPrefix('api');
+
   app.use(cookieParser());
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Backend API для курсової')
+    .setDescription(
+      'API для авторизації, користувачів, заявок, мок-даних та сортування.',
+    )
+    .setVersion('1.0')
+    .addCookieAuth('userId')
+    .addCookieAuth('userRole')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, document);
 
   app.enableCors({
     origin: config.get<string>('CORS_ORIGIN'),
