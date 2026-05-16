@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BinaryHeap } from 'src/shared/data/binary-heap';
+import { BinaryHeap } from 'src/shared/data-structures/binary-heap';
 
 export interface SortableItem {
   createdAt: string | Date;

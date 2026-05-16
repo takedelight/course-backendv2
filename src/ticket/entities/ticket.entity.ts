@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-export enum StatementStatus {
+export enum TICKET_STATUS {
   PENDING = 'В обробці',
   SUCCESS = 'Виконано',
   REJECT = 'Відхилено',
@@ -22,12 +22,15 @@ export class Ticket {
   @Column('varchar')
   type: string;
 
+  @Column('varchar')
+  VIN: string;
+
   @Column({
-    default: StatementStatus.PENDING,
-    enum: StatementStatus,
+    default: TICKET_STATUS.PENDING,
+    enum: TICKET_STATUS,
     name: 'status',
   })
-  status: StatementStatus;
+  status: TICKET_STATUS;
 
   @ManyToOne(() => User, (user) => user.tickets, {
     onDelete: 'CASCADE',

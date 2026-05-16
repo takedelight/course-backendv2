@@ -8,6 +8,7 @@ import { Ticket } from './ticket/entities/ticket.entity';
 
 import { SorterModule } from './sorter/sorter.module';
 import { Module } from '@nestjs/common';
+import { MockModule } from './mock/mock.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { Module } from '@nestjs/common';
     AuthModule,
     TicketModule,
     SorterModule,
+    MockModule,
   ],
 })
 export class AppModule {}
