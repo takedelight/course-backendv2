@@ -20,14 +20,15 @@ import { AuthGuard } from 'src/shared/guards/auth.guard';
 
 @ApiTags('Користувачі')
 @Controller('user')
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(AuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('/')
   @ApiOperation({ summary: 'Отримати всіх користувачів (лише оператор)' })
   @ApiResponse({ status: 200, description: 'Список користувачів' })
-  @Roles('operator')
+  @Roles('OPERATOR')
+  @UseGuards(RolesGuard)
   async getAll() {
     return await this.userService.getAll();
   }
@@ -54,7 +55,7 @@ export class UserController {
     return await this.userService.delete(id);
   }
 
-  @Roles('operator')
+  @Roles('OPERATOR')
   @Post('/create')
   @ApiOperation({ summary: 'Створити користувача (лише оператор)' })
   @ApiBody({ type: CreateUserDto })

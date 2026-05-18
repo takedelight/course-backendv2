@@ -2,9 +2,9 @@ import {
   Body,
   Controller,
   Delete,
-  Get,
   Param,
   Post,
+  Get,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -17,11 +17,10 @@ import {
 } from '@nestjs/swagger';
 import { TicketService } from './ticket.service';
 import { RolesGuard } from 'src/shared/guards/roles.guard';
-import { type Request } from 'express';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { type SortOrder } from 'src/sorter/sorter.service';
 import { Roles } from 'src/shared/decorators/set-role.decoratos';
 import { ExtractUserId } from 'src/shared/decorators/extract-user-id.decorator';
+import type { SortOrder, Algorithm } from 'src/shared/types/sorter.types';
 
 @ApiTags('Заявки')
 @UseGuards(RolesGuard)
@@ -29,36 +28,60 @@ import { ExtractUserId } from 'src/shared/decorators/extract-user-id.decorator';
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
 
-  @Roles('operator')
-  @Get('all')
+  @Roles('OPERATOR')
+  @Get('/')
   @ApiOperation({ summary: 'Отримати всі заявки (лише оператор)' })
   @ApiQuery({ name: 'q', required: false })
-  @ApiQuery({ name: 'order', required: false, enum: ['asc', 'desc'] })
-  @ApiQuery({ name: 'sort_by', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'sortBy', required: false })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiResponse({ status: 200, description: 'Список заявок' })
   async getAll(
     @Query('q') q: string,
-    @Query('order') order: SortOrder,
-    @Query('sort_by') sortBy: string,
+    @Query('status') status: string,
+    @Query('sortBy') sortBy: string,
+    @Query('sortOrder') sortOrder: SortOrder,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
   ) {
-    return this.ticketService.getAllTickets({ q, order, sortBy, page, limit });
+    return this.ticketService.getAllTickets({
+      q,
+      status,
+      sortBy,
+      sortOrder,
+      page,
+      limit,
+    });
   }
 
-  @Get('')
+  @Get('my')
   @ApiOperation({ summary: 'Отримати заявки поточного користувача' })
   @ApiQuery({ name: 'q', required: false })
-  @ApiQuery({ name: 'order', required: false, enum: ['asc', 'desc'] })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'sortBy', required: false })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiResponse({ status: 200, description: 'Список заявок користувача' })
   async getByUserId(
     @ExtractUserId() userId: string,
     @Query('q') q: string,
-    @Query('order') order: SortOrder,
+    @Query('status') status: string,
+    @Query('sortBy') sortBy: string,
+    @Query('sortOrder') sortOrder: SortOrder,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
   ) {
-    return await this.ticketService.geAllUserTickets(userId, { q, order });
+    return await this.ticketService.geAllUserTickets(userId, {
+      q,
+      status,
+      sortBy,
+      sortOrder,
+      page,
+      limit,
+    });
   }
 
   @Post('')
@@ -72,7 +95,7 @@ export class TicketController {
     return await this.ticketService.createTicket(userId, body);
   }
 
-  @Roles('operator')
+  @Roles('OPERATOR')
   @Delete('')
   @ApiOperation({ summary: 'Видалити всі заявки (лише оператор)' })
   @ApiResponse({ status: 200, description: 'Заявки видалено' })
@@ -80,7 +103,7 @@ export class TicketController {
     return await this.ticketService.delete();
   }
 
-  @Roles('operator')
+  @Roles('OPERATOR')
   @Post('/complete/:id')
   @ApiOperation({ summary: 'Завершити заявку за id (лише оператор)' })
   @ApiResponse({ status: 200, description: 'Заявку завершено' })
@@ -88,7 +111,7 @@ export class TicketController {
     return await this.ticketService.completeTicket(id);
   }
 
-  @Roles('operator')
+  @Roles('OPERATOR')
   @Post('/reject/:id')
   @ApiOperation({ summary: 'Відхилити заявку за id (лише оператор)' })
   @ApiResponse({ status: 200, description: 'Заявку відхилено' })
@@ -96,20 +119,19 @@ export class TicketController {
     return await this.ticketService.rejectTicket(id);
   }
 
-  @Roles('operator')
+  @Roles('OPERATOR')
   @Get('/comparison')
   @ApiOperation({ summary: 'Порівняти алгоритми сортування (лише оператор)' })
   @ApiQuery({ name: 'quantity', required: true, example: 100 })
-  @ApiQuery({ name: 'algs', required: false })
+  @ApiQuery({ name: 'alg', required: false })
   @ApiQuery({ name: 'order', required: false, enum: ['asc', 'desc'] })
   @ApiResponse({ status: 200, description: 'Результат порівняння' })
   async comparison(
     @Query('quantity') quantity: number,
-    @Query('algs') algs: string[] | string,
+    @Query('alg') algs: Algorithm[],
     @Query('order') order: SortOrder,
   ) {
     const algorithms = Array.isArray(algs) ? algs : [algs];
-
     return this.ticketService.comparisonTickets(quantity, order, algorithms);
   }
 }

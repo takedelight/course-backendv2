@@ -1,55 +1,52 @@
 import { Injectable } from '@nestjs/common';
+import { Ticket } from '@prisma/client';
 import { BinaryHeap } from 'src/shared/data-structures/binary-heap';
+import type {
+  SortOrder,
+  Algorithm,
+  SortResult,
+} from 'src/shared/types/sorter.types';
 
-export interface SortableItem {
-  createdAt: string | Date;
+interface SortOptions<T> {
+  algorithm: Algorithm;
+  order: SortOrder;
+  sortBy: keyof T;
 }
 
-export type SortAlgorithm =
-  | 'bubbleSort'
-  | 'mergeSort'
-  | 'heapSort'
-  | 'selectionSort';
-
-export type SortOrder = 'asc' | 'desc';
-
-export interface SortResult<T> {
-  result: T[];
-  time: number;
-  operations: number;
+interface AlgorithmOptions<T> {
+  sortBy: keyof T;
+  order: SortOrder;
 }
 
 @Injectable()
 export class SorterService {
-  sort<T extends SortableItem>(
-    items: T[],
-    algorithm: string,
-    order: SortOrder = 'asc',
-  ): SortResult<T> {
+  sort<T extends Ticket>(items: T[], options: SortOptions<T>) {
+    const { algorithm, order, sortBy } = options;
+
     switch (algorithm) {
       case 'bubbleSort':
-        return this.bubbleSort(items, order);
+        return this.bubbleSort(items, { order, sortBy });
       case 'mergeSort':
-        return this.mergeSort(items, order);
+        return this.mergeSort(items, { order, sortBy });
       case 'heapSort':
-        return this.heapSort(items, order);
+        return this.heapSort(items, { order, sortBy });
       case 'selectionSort':
-        return this.selectionSort(items, order);
+        return this.selectionSort(items, { order, sortBy });
       default:
         return { result: items, time: 0, operations: 0 };
     }
   }
 
-  private bubbleSort<T extends SortableItem>(
+  private bubbleSort<T extends Ticket>(
     items: T[],
-    order: SortOrder,
+    options: AlgorithmOptions<T>,
   ): SortResult<T> {
     const arr = [...items];
     let operations = 0;
 
     const compare = (a: T, b: T) => {
       operations++;
-      return this.compareDates(a.createdAt, b.createdAt, order);
+      return this.compare(a, b, options.order, options.sortBy);
     };
 
     const start = performance.now();
@@ -72,9 +69,9 @@ export class SorterService {
     };
   }
 
-  private selectionSort<T extends SortableItem>(
+  private selectionSort<T extends Ticket>(
     items: T[],
-    order: SortOrder,
+    options: AlgorithmOptions<T>,
   ): SortResult<T> {
     const arr = [...items];
     let operations = 0;
@@ -87,8 +84,7 @@ export class SorterService {
       for (let j = i + 1; j < arr.length; j++) {
         operations++;
         if (
-          this.compareDates(arr[j].createdAt, arr[minIndex].createdAt, order) <
-          0
+          this.compare(arr[j], arr[minIndex], options.order, options.sortBy) < 0
         ) {
           minIndex = j;
         }
@@ -109,9 +105,9 @@ export class SorterService {
     };
   }
 
-  private mergeSort<T extends SortableItem>(
+  private mergeSort<T extends Ticket>(
     items: T[],
-    order: SortOrder,
+    options: AlgorithmOptions<T>,
   ): SortResult<T> {
     let operations = 0;
     const start = performance.now();
@@ -132,7 +128,7 @@ export class SorterService {
       while (left.length && right.length) {
         operations++;
         if (
-          this.compareDates(left[0].createdAt, right[0].createdAt, order) <= 0
+          this.compare(left[0], right[0], options.order, options.sortBy) <= 0
         ) {
           result.push(left.shift()!);
         } else {
@@ -153,15 +149,15 @@ export class SorterService {
     };
   }
 
-  private heapSort<T extends SortableItem>(
+  private heapSort<T extends Ticket>(
     items: T[],
-    order: SortOrder,
+    options: AlgorithmOptions<T>,
   ): SortResult<T> {
     let operations = 0;
 
     const compare = (a: T, b: T) => {
       operations++;
-      return this.compareDates(a.createdAt, b.createdAt, order);
+      return this.compare(a, b, options.order, options.sortBy);
     };
 
     const start = performance.now();
@@ -188,14 +184,27 @@ export class SorterService {
     };
   }
 
-  private compareDates(
-    a: string | Date,
-    b: string | Date,
+  private compare<T extends Ticket>(
+    a: T,
+    b: T,
     order: SortOrder,
+    sortBy: keyof T,
   ): number {
-    const timeA = a instanceof Date ? a.getTime() : new Date(a).getTime();
-    const timeB = b instanceof Date ? b.getTime() : new Date(b).getTime();
-    const diff = timeA - timeB;
+    const valA = a[sortBy];
+    const valB = b[sortBy];
+
+    let diff = 0;
+
+    if (valA instanceof Date && valB instanceof Date) {
+      diff = valA.getTime() - valB.getTime();
+    } else if (typeof valA === 'number' && typeof valB === 'number') {
+      diff = valA - valB;
+    } else if (typeof valA === 'string' && typeof valB === 'string') {
+      diff = valA.localeCompare(valB);
+    } else {
+      diff = String(valA).localeCompare(String(valB));
+    }
+
     return order === 'asc' ? diff : -diff;
   }
 }

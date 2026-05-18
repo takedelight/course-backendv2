@@ -1,15 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { SorterService, SortOrder } from 'src/sorter/sorter.service';
+import { SorterService } from 'src/sorter/sorter.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { Prisma, TicketStatus } from '@prisma/client';
+import { Prisma, TicketStatus, Ticket } from '@prisma/client';
+import { type SortOrder, type Algorithm } from 'src/shared/types/sorter.types';
 
 interface QueryParams {
   q?: string;
-  order: SortOrder;
+  status?: string;
   sortBy?: string;
-  page?: number;
-  limit?: number;
+  sortOrder?: SortOrder;
+  page?: number | string;
+  limit?: number | string;
 }
 
 @Injectable()
@@ -20,9 +22,10 @@ export class TicketService {
   ) {}
 
   async getAllTickets(params: QueryParams) {
-    const page = params.page ?? 1;
-    const limit = params.limit ?? 10;
-    const order = params.order;
+    const page = params.page ? Number(params.page) : 1;
+    const limit = params.limit ? Number(params.limit) : 10;
+    const order = params.sortOrder ?? 'desc';
+    const sortBy = (params.sortBy ?? 'createdAt') as keyof Ticket;
 
     const where: Prisma.TicketWhereInput = {};
 
@@ -35,6 +38,18 @@ export class TicketService {
       ];
     }
 
+    if (params.status && params.status !== '' && params.status !== 'all') {
+      let normalizedStatus = params.status.toUpperCase();
+
+      if (normalizedStatus === 'REJECTED') {
+        normalizedStatus = 'REJECT';
+      }
+
+      if (normalizedStatus in TicketStatus) {
+        where.status = normalizedStatus as TicketStatus;
+      }
+    }
+
     const [rawTickets, total] = await this.prisma.$transaction([
       this.prisma.ticket.findMany({
         where,
@@ -45,6 +60,8 @@ export class TicketService {
           type: true,
           VIN: true,
           status: true,
+          userId: true,
+          completedAt: true,
           createdAt: true,
           user: {
             select: {
@@ -57,16 +74,20 @@ export class TicketService {
       this.prisma.ticket.count({ where }),
     ]);
 
-    const data = rawTickets.map(({ user, ...ticket }) => ({
-      ...ticket,
-      firstName: user?.firstName,
-      lastName: user?.lastName,
+    const data = rawTickets.map((item) => ({
+      ...item,
+      firstName: item.user?.firstName,
+      lastName: item.user?.lastName,
     }));
 
-    const sortedData = this.sorter.sort(data, 'heapSort', order);
+    const sortedResult = this.sorter.sort(data, {
+      algorithm: 'heapSort',
+      order,
+      sortBy,
+    });
 
     return {
-      data: sortedData,
+      result: sortedResult,
       total,
       page,
       lastPage: Math.ceil(total / limit),
@@ -74,29 +95,33 @@ export class TicketService {
   }
 
   async geAllUserTickets(userId: string, params: QueryParams) {
-    const where: Prisma.TicketWhereInput = {
-      userId,
-    };
+    const page = params?.page ? Number(params.page) : 1;
+    const limit = params?.limit ? Number(params.limit) : 10;
+    const order = params?.sortOrder ?? 'desc';
+    const sortBy = (params?.sortBy ?? 'createdAt') as keyof Ticket;
 
-    if (params?.q) {
-      where.OR = [
-        { type: { contains: params.q, mode: 'insensitive' } },
-        { VIN: { contains: params.q, mode: 'insensitive' } },
-        { user: { email: { contains: params.q, mode: 'insensitive' } } },
-      ];
+    const andConditions: Prisma.TicketWhereInput[] = [{ userId }];
+
+    if (params?.q && params.q.trim() !== '') {
+      andConditions.push({
+        OR: [
+          { type: { contains: params.q, mode: 'insensitive' } },
+          { VIN: { contains: params.q, mode: 'insensitive' } },
+          { user: { email: { contains: params.q, mode: 'insensitive' } } },
+        ],
+      });
     }
 
-    const status = params?.sortBy
-      ? TicketStatus[params.sortBy as keyof typeof TicketStatus]
-      : undefined;
-
-    if (status) {
-      where.status = status;
+    if (params?.status && params.status !== '' && params.status !== 'all') {
+      const mappedStatus = params.status.toUpperCase();
+      if (mappedStatus in TicketStatus) {
+        andConditions.push({
+          status: mappedStatus as TicketStatus,
+        });
+      }
     }
 
-    const page = params?.page ?? 1;
-    const limit = params?.limit ?? 10;
-    const order = params?.order ?? 'desc';
+    const where: Prisma.TicketWhereInput = { AND: andConditions };
 
     const [rawTickets, total] = await this.prisma.$transaction([
       this.prisma.ticket.findMany({
@@ -108,10 +133,14 @@ export class TicketService {
       this.prisma.ticket.count({ where }),
     ]);
 
-    const sortedData = this.sorter.sort(rawTickets, 'heapSort', order);
+    const sortedData = this.sorter.sort(rawTickets, {
+      algorithm: 'heapSort',
+      order,
+      sortBy,
+    });
 
     return {
-      data: sortedData,
+      result: sortedData,
       total,
       page,
       lastPage: Math.ceil(total / limit),
@@ -143,7 +172,7 @@ export class TicketService {
         },
       });
     } catch {
-      throw new NotFoundException('Користувача з таким ID не існує.');
+      throw new NotFoundException('Заявки з таким ID не існує.');
     }
   }
 
@@ -154,21 +183,26 @@ export class TicketService {
         data: { status: 'REJECT' },
       });
     } catch {
-      throw new NotFoundException('Користувача з таким ID не існує.');
+      throw new NotFoundException('Заявки з таким ID не існує.');
     }
   }
 
   async comparisonTickets(
     quantity: number,
     order: SortOrder = 'desc',
-    algs: string[] = ['heapSort'],
+    algs: Algorithm[] = ['heapSort'],
   ) {
     const tickets = await this.prisma.ticket.findMany({
       take: quantity,
     });
 
     return algs.map((algorithm) => {
-      const { time, operations } = this.sorter.sort(tickets, algorithm, order);
+      const { time, operations } = this.sorter.sort(tickets, {
+        algorithm: algorithm,
+        order,
+        sortBy: 'createdAt',
+      });
+
       return {
         total: tickets.length,
         result: { algorithm, time, operations },

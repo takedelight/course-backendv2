@@ -4,7 +4,7 @@ export interface SortField {
   VIN: string;
 }
 
-export type SortAlgorithm =
+export type Algorithm =
   | 'bubbleSort'
   | 'mergeSort'
   | 'heapSort'

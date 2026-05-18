@@ -41,7 +41,7 @@ model Ticket {
 
 enum UserRole {
   OPERATOR @map("operator")
-  USER     @map("user")
+  USER @map("user")
 }
 
 enum TicketStatus {
