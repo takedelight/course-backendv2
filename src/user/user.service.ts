@@ -80,21 +80,49 @@ export class UserService {
   }
 
   async create(dto: CreateUserDto) {
-    const user = await this.prismaService.user.findUnique({
+    const isExist = await this.prismaService.user.findUnique({
       where: { email: dto.email },
-      select: this.select,
     });
 
-    if (user) {
+    if (isExist) {
       throw new ConflictException('Користувач з таким email вже існує.');
     }
 
-    return await this.prismaService.user.create({
+    const hashedPassword = await hash(dto.password);
+    const newUser = await this.prismaService.user.create({
       data: {
         ...dto,
-        password: await hash(dto.password),
+        password: hashedPassword,
       },
+      select: this.select,
     });
+
+    const mockCarsData = [
+      { brand: 'Volkswagen', modelName: 'Passat', year: 2019 },
+      { brand: 'BMW', modelName: 'X5', year: 2021 },
+      { brand: 'Audi', modelName: 'A6', year: 2020 },
+      { brand: 'Toyota', modelName: 'Camry', year: 2018 },
+      { brand: 'Ford', modelName: 'Focus', year: 2017 },
+      { brand: 'Mercedes-Benz', modelName: 'E-Class', year: 2022 },
+      { brand: 'Renault', modelName: 'Megane', year: 2016 },
+    ];
+
+    const carsToCreate = mockCarsData.map((car) => ({
+      brand: car.brand,
+      modelName: car.modelName,
+      year: car.year,
+      vin:
+        Math.random().toString(36).substring(2, 11).toUpperCase() +
+        Math.random().toString(36).substring(2, 10).toUpperCase(),
+      plateNumber: `AA${Math.floor(1000 + Math.random() * 9000)}BB`,
+      userId: newUser.id,
+    }));
+
+    await this.prismaService.car.createMany({
+      data: carsToCreate,
+    });
+
+    return newUser;
   }
 
   async update(userId: string, dto: UpdateUserDto) {

@@ -14,8 +14,8 @@ model User {
   password  String
   role      UserRole @default(USER)
 
-
   tickets   Ticket[]
+  cars      Car[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -32,16 +32,37 @@ model Ticket {
   userId    String       @map("user_id")
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  carId     String       @map("car_id")
+  car       Car          @relation(fields: [carId], references: [id], onDelete: Cascade)
+
   completedAt DateTime?  @map("completed_at")
   createdAt   DateTime   @default(now()) @map("created_at")
 
   @@map("ticket")
 }
 
+model Car {
+  id          String   @id @default(uuid())
+  vin         String   @unique @map("vin")
+  brand       String   @map("brand")
+  modelName   String   @map("model_name")
+  year        Int      @map("year")
+  plateNumber String   @map("plate_number")
+
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tickets     Ticket[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("cars")
+}
 
 enum UserRole {
   OPERATOR @map("operator")
-  USER @map("user")
+  USER     @map("user")
 }
 
 enum TicketStatus {

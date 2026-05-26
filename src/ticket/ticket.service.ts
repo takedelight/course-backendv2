@@ -199,6 +199,7 @@ export class TicketService {
         status: 'PENDING',
         VIN: dto.VIN,
         userId,
+        carId: dto.carId,
       },
     });
   }

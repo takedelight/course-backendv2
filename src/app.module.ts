@@ -7,6 +7,7 @@ import { SorterModule } from './sorter/sorter.module';
 import { Module } from '@nestjs/common';
 import { MockModule } from './mock/mock.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { CarModule } from './car/car.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PrismaModule } from './prisma/prisma.module';
     SorterModule,
     MockModule,
     PrismaModule,
+    CarModule,
   ],
 })
 export class AppModule {}
