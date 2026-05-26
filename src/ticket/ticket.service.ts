@@ -2,8 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SorterService } from 'src/sorter/sorter.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { Prisma, TicketStatus, Ticket } from '@prisma/client';
+import { Prisma, TicketStatus } from '@prisma/client';
 import { type SortOrder, type Algorithm } from 'src/shared/types/sorter.types';
+import { BinaryHeap } from 'src/shared/data-structures/binary-heap';
 
 interface QueryParams {
   q?: string;
@@ -25,7 +26,7 @@ export class TicketService {
     const page = params.page ? Number(params.page) : 1;
     const limit = params.limit ? Number(params.limit) : 10;
     const order = params.sortOrder ?? 'desc';
-    const sortBy = (params.sortBy ?? 'createdAt') as keyof Ticket;
+    const sortBy = params.sortBy ?? 'createdAt';
 
     const where: Prisma.TicketWhereInput = {};
 
@@ -40,11 +41,7 @@ export class TicketService {
 
     if (params.status && params.status !== '' && params.status !== 'all') {
       let normalizedStatus = params.status.toUpperCase();
-
-      if (normalizedStatus === 'REJECTED') {
-        normalizedStatus = 'REJECT';
-      }
-
+      if (normalizedStatus === 'REJECTED') normalizedStatus = 'REJECT';
       if (normalizedStatus in TicketStatus) {
         where.status = normalizedStatus as TicketStatus;
       }
@@ -74,20 +71,43 @@ export class TicketService {
       this.prisma.ticket.count({ where }),
     ]);
 
-    const data = rawTickets.map((item) => ({
-      ...item,
-      firstName: item.user?.firstName,
-      lastName: item.user?.lastName,
-    }));
+    type TicketItem = (typeof rawTickets)[0];
 
-    const sortedResult = this.sorter.sort(data, {
-      algorithm: 'heapSort',
-      order,
-      sortBy,
-    });
+    const compareFn = (a: TicketItem, b: TicketItem): number => {
+      const valA = a[sortBy as keyof TicketItem];
+      const valB = b[sortBy as keyof TicketItem];
+
+      if (valA === null || valA === undefined) {
+        if (valB === null || valB === undefined) return 0;
+        return order === 'desc' ? -1 : 1;
+      }
+      if (valB === null || valB === undefined) {
+        return order === 'desc' ? 1 : -1;
+      }
+
+      if (valA instanceof Date && valB instanceof Date) {
+        return order === 'desc'
+          ? valA.getTime() - valB.getTime()
+          : valB.getTime() - valA.getTime();
+      }
+
+      if (valA > valB) return order === 'desc' ? 1 : -1;
+      if (valA < valB) return order === 'desc' ? -1 : 1;
+      return 0;
+    };
+
+    const heapType = order === 'desc' ? 'MaxHeap' : 'MinHeap';
+
+    const heap = new BinaryHeap<TicketItem>(compareFn, heapType);
+
+    for (const ticket of rawTickets) {
+      heap.push(ticket);
+    }
+
+    const heapDto = heap.toDto();
 
     return {
-      result: sortedResult,
+      result: heapDto,
       total,
       page,
       lastPage: Math.ceil(total / limit),
@@ -98,7 +118,7 @@ export class TicketService {
     const page = params?.page ? Number(params.page) : 1;
     const limit = params?.limit ? Number(params.limit) : 10;
     const order = params?.sortOrder ?? 'desc';
-    const sortBy = (params?.sortBy ?? 'createdAt') as keyof Ticket;
+    const sortBy = params?.sortBy ?? 'createdAt';
 
     const andConditions: Prisma.TicketWhereInput[] = [{ userId }];
 
@@ -128,19 +148,44 @@ export class TicketService {
         where,
         skip: (page - 1) * limit,
         take: limit,
-        include: { user: true },
       }),
       this.prisma.ticket.count({ where }),
     ]);
 
-    const sortedData = this.sorter.sort(rawTickets, {
-      algorithm: 'heapSort',
-      order,
-      sortBy,
-    });
+    type TicketItem = (typeof rawTickets)[0];
+
+    const compareFn = (a: TicketItem, b: TicketItem): number => {
+      const valA = a[sortBy as keyof TicketItem];
+      const valB = b[sortBy as keyof TicketItem];
+
+      if (valA === null || valA === undefined) {
+        if (valB === null || valB === undefined) return 0;
+        return order === 'desc' ? -1 : 1;
+      }
+      if (valB === null || valB === undefined) {
+        return order === 'desc' ? 1 : -1;
+      }
+
+      if (valA instanceof Date && valB instanceof Date) {
+        return order === 'desc'
+          ? valA.getTime() - valB.getTime()
+          : valB.getTime() - valA.getTime();
+      }
+
+      if (valA > valB) return order === 'desc' ? 1 : -1;
+      if (valA < valB) return order === 'desc' ? -1 : 1;
+      return 0;
+    };
+
+    const heapType = order === 'desc' ? 'MaxHeap' : 'MinHeap';
+    const heap = new BinaryHeap<TicketItem>(compareFn, heapType);
+
+    for (const ticket of rawTickets) {
+      heap.push(ticket);
+    }
 
     return {
-      result: sortedData,
+      result: heap.toDto(),
       total,
       page,
       lastPage: Math.ceil(total / limit),

@@ -12,7 +12,6 @@ import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { RolesGuard } from 'src/shared/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/set-role.decoratos';
-import { type Request } from 'express';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ExtractUserId } from 'src/shared/decorators/extract-user-id.decorator';

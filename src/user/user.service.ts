@@ -7,6 +7,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { hash } from 'argon2';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { BinaryHeap } from 'src/shared/data-structures/binary-heap';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -24,9 +26,20 @@ export class UserService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async getAll() {
-    return this.prismaService.user.findMany({
+    const users = await this.prismaService.user.findMany({
       select: this.select,
     });
+
+    const heap = new BinaryHeap<Omit<User, 'password'>>(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+      'MaxHeap',
+    );
+
+    for (const user of users) {
+      heap.push(user);
+    }
+
+    return heap.toDto();
   }
 
   async getByEmail(email: string) {

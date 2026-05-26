@@ -1,9 +1,13 @@
+export type HeapType = 'MinHeap' | 'MaxHeap';
+
 export class BinaryHeap<T> {
   private heap: T[] = [];
-  private compare: (a: T, b: T) => number;
+  private readonly compare: (a: T, b: T) => number;
+  private readonly type: HeapType;
 
-  constructor(compareFn: (a: T, b: T) => number) {
+  constructor(compareFn: (a: T, b: T) => number, type: HeapType = 'MaxHeap') {
     this.compare = compareFn;
+    this.type = type;
   }
 
   push(value: T) {
@@ -24,6 +28,16 @@ export class BinaryHeap<T> {
 
   size() {
     return this.heap.length;
+  }
+
+  toDto() {
+    return {
+      __type: this.type,
+      size: this.size(),
+      state: {
+        heap: this.heap,
+      },
+    };
   }
 
   private heapifyUp(index: number) {
